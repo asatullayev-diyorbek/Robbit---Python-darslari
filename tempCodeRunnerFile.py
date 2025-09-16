@@ -1,0 +1,1 @@
+davlat = input("Davlat nomini kiriting: ")
