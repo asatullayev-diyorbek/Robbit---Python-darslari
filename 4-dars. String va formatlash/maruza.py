@@ -35,8 +35,9 @@
 # print(country[::-1])
 
 #---------------------------
-# String metodlari
+# # String metodlari
 # first_name = input("Ismingizni kiriting: ")
 # print(f"Ism: {first_name.upper()}")
 # print(f"Ism: {first_name.lower()}")
 # print(f"Ism: {first_name.title()}")
+# print(f"Ism: {first_name.swapcase()}")
