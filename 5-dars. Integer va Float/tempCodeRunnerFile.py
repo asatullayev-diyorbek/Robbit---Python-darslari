@@ -1,1 +1,0 @@
-uzim + muzaffarxon_yoshi + shohjahon_yoshi + muhammadaziz_yoshi + adhamjon_yoshi + abduqodir_yoshi + abdurahmon_yoshi
