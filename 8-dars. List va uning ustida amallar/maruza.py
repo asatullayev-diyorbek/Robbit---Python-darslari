@@ -43,4 +43,5 @@
 # 3 ------------
 sonlar = list(map(int, input("Sonlarni kiriting: ").split(' ')))
 # print(sonlar[1] + sonlar[3])
+sonlar.reverse()
 print(sonlar)

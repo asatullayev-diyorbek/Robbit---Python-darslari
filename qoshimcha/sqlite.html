@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Python + sqlite3 — Boshlang'ich qo'llanma</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;line-height:1.6;color:#0f172a;padding:24px;background:#f8fafc}
+    .container{max-width:980px;margin:0 auto;background:white;padding:28px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+    h1,h2{color:#0f172a}
+    pre{background:#0b1220;color:#e6eef8;padding:16px;border-radius:8px;overflow:auto}
+    code{font-family:monospace}
+    .note{background:#eef2ff;color:#1e293b;padding:10px;border-left:4px solid #6366f1;border-radius:6px}
+    table{border-collapse:collapse;margin-top:8px}
+    td,th{border:1px solid #e6eef8;padding:6px}
+    .kbd{background:#111827;color:#fff;padding:3px 6px;border-radius:4px;font-family:monospace}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Python + <code>sqlite3</code> — Boshlang'ich qo'llanma</h1>
+    <p>Ushbu sahifa Python yordamida SQLite ma'lumotlar bazasi bilan qanday qilib ulanish, jadval yaratish va CRUD (Create, Read, Update, Delete) amallarini bajarishni bosqichma-bosqich tushuntiradi. Boshlang'ich bilimlaringiz yetadi deb hisoblab oddiy va tushunarli misollar keltirdim.</p>
+
+    <h2>Talablar</h2>
+    <ul>
+      <li>Python 3.6+ (odatda <span class="kbd">sqlite3</span> moduli standart kutubxonada mavjud)</li>
+      <li>Terminal / komanda qatori</li>
+    </ul>
+
+    <h2>1. Ulanish (Connection)</h2>
+    <p>SQLite faylga bog'lanish uchun <code>sqlite3.connect()</code> ishlatiladi. Agar fayl mavjud bo'lmasa, u avtomatik yaratiladi.</p>
+    <pre><code># connection_example.py
+import sqlite3
+
+# Baza nomi: mydata.db
+conn = sqlite3.connect('mydata.db')   # yoki :memory: vaqtincha in-memory baza
+cur = conn.cursor()
+
+# ... operatsiyalar ...
+
+cur.close()
+conn.close()
+</code></pre>
+
+    <div class="note">Maslahat: <code>with sqlite3.connect('mydata.db') as conn:</code> deb yozsangiz, blok tugagach commit avtomatik chaqiriladi va connection yopiladi (exceptions bo'lsa ham rollback qilinadi).</div>
+
+    <h2>2. Jadval yaratish</h2>
+    <p>Jadval yaratish uchun SQL <code>CREATE TABLE</code> so'rovi ishlatiladi. Dasturda bu buyruqni faqat bir marta bajarish kerak — mavjud bo'lsa xato chiqmasligi uchun <code>IF NOT EXISTS</code> qo'shamiz.</p>
+    <pre><code># create_table.py
+import sqlite3
+
+with sqlite3.connect('mydata.db') as conn:
+    cur = conn.cursor()
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        age INTEGER
+    )
+    ''')
+    # conn.commit() avtomatik (with bloki ichida)
+</code></pre>
+
+    <h2>3. Ma'lumot qo'shish (INSERT)</h2>
+    <p>Parametrli so'rovlar orqali SQL injection xavfini kamaytiramiz. <code>?</code> belgisi orqali qiymatlarni uzatamiz.</p>
+    <pre><code># insert.py
+import sqlite3
+
+users = [
+    ('Ali', 'ali@example.com', 30),
+    ('Nodir', 'nodir@example.com', 25),
+]
+
+with sqlite3.connect('mydata.db') as conn:
+    cur = conn.cursor()
+    cur.executemany('INSERT INTO users (name, email, age) VALUES (?, ?, ?)', users)
+</code></pre>
+
+    <h2>4. Ma'lumot olish (SELECT)</h2>
+    <p>Natijani <code>fetchall()</code> yoki <code>fetchone()</code> bilan olish mumkin. <code>row_factory</code> orqali natijani dictionary ko'rinishida olish qulay.</p>
+    <pre><code># select.py
+import sqlite3
+
+conn = sqlite3.connect('mydata.db')
+conn.row_factory = sqlite3.Row  # natija dict-like bo'ladi
+cur = conn.cursor()
+
+cur.execute('SELECT * FROM users WHERE age &gt;=?', (25,))
+rows = cur.fetchall()
+for r in rows:
+    print(r['id'], r['name'], r['email'], r['age'])
+
+cur.close()
+conn.close()
+</code></pre>
+
+    <h2>5. Ma'lumotni tahrirlash (UPDATE)</h2>
+    <pre><code># update.py
+import sqlite3
+
+with sqlite3.connect('mydata.db') as conn:
+    cur = conn.cursor()
+    cur.execute('UPDATE users SET age = ? WHERE email = ?', (31, 'ali@example.com'))
+    print('Updated rows:', cur.rowcount)
+</code></pre>
+
+    <h2>6. Ma'lumotni o'chirish (DELETE)</h2>
+    <pre><code># delete.py
+import sqlite3
+
+with sqlite3.connect('mydata.db') as conn:
+    cur = conn.cursor()
+    cur.execute('DELETE FROM users WHERE email = ?', ('nodir@example.com',))
+    print('Deleted rows:', cur.rowcount)
+</code></pre>
+
+    <h2>7. Oddiy yordamchi funksiyalar bilan to'liq misol (CRUD funktsiyalar)</h2>
+    <pre><code># crud_example.py
+import sqlite3
+from typing import List, Dict, Any
+
+DB = 'mydata.db'
+
+def get_conn():
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            age INTEGER
+        )
+        ''')
+
+def create_user(name: str, email: str, age: int) -> int:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute('INSERT INTO users (name, email, age) VALUES (?, ?, ?)', (name, email, age))
+        return cur.lastrowid
+
+def get_users() -> List[Dict[str, Any]]:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT * FROM users')
+        return [dict(row) for row in cur.fetchall()]
+
+def update_user(user_id: int, **fields) -> int:
+    if not fields:
+        return 0
+    keys = ', '.join(f"{k} = ?" for k in fields)
+    values = list(fields.values()) + [user_id]
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(f'UPDATE users SET {keys} WHERE id = ?', values)
+        return cur.rowcount
+
+def delete_user(user_id: int) -> int:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        return cur.rowcount
+
+if __name__ == '__main__':
+    init_db()
+    uid = create_user('Murod', 'murod@example.com', 28)
+    print('Yaratildi, id =', uid)
+    print('Barcha foydalanuvchilar:', get_users())
+    update_user(uid, age=29)
+    print('Yangilangan:', get_users())
+    delete_user(uid)
+    print('O'chirildi. Hozir:', get_users())
+</code></pre>
+
+    <h2>8. Qo'shimcha maslahatlar</h2>
+    <ul>
+      <li>Doimo parametrli so'rovlar (<code>?</code> yoki <code>named :name</code>) ishlating — bu SQL injection xavfini kamaytiradi.</li>
+      <li>Large insertlar uchun <code>executemany()</code> yoki transaction ichida ko'p insert qilish samaraliroq.</li>
+      <li>SQLite kichik/yarim yengil loyihalar uchun juda yaxshi — lekin katta hajmli sistemalarda serverli RDBMS (Postgres, MySQL) ko'proq mos keladi.</li>
+      <li>SQLite faylini ko'rish uchun terminalda <code>sqlite3 mydata.db</code> va <code>.tables</code>, <code>SELECT * FROM users LIMIT 5;</code> deb tekshiring.</li>
+    </ul>
+
+    <h2>9. Tez-tez uchraydigan muammolar</h2>
+    <table>
+      <tr><th>Muzokara</th><th>YeChim</th></tr>
+      <tr><td>Concurrent write xatoliklari (database is locked)</td><td>Yozish vaqtida boshqa process bilan to'qnashuv bo'lishi mumkin — yozishlarni kamaytiring yoki serverli DBga o'ting. short transactions bilan ishlang.</td></tr>
+      <tr><td>Unique constraint xatosi</td><td>INSERT qilishdan oldin mavjudligini tekshiring yoki <code>INSERT OR IGNORE</code> / <code>INSERT OR REPLACE</code> ishlating.</td></tr>
+    </table>
+
+    <h2>10. Keyingi qadamlar</h2>
+    <p>Agar xohlasangiz, men sizga bu kodlarni alohida <code>.py</code> fayl ko'rinishida tayyorlab bera olaman, yoki Flask/Django bilan web-interfeys qilib olib beraman. Qaysi formatda xohlaysiz?</p>
+
+    <p style="margin-top:18px;">— Tayyorlandi: <strong>Python + sqlite3 boshlang'ich qo'llanma</strong></p>
+  </div>
+</body>
+</html>
